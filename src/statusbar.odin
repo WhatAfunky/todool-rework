@@ -57,30 +57,30 @@ vim_label_message :: proc(element: ^Element, msg: Message, di: int, dp: rawptr) 
 	return 0
 }
 
-statusbar_init :: proc(using statusbar: ^Statusbar, parent: ^Element) {
-	stat = element_init(Element, parent, {}, statusbar_message, context.allocator)
-	label_info = label_init(stat, { .Label_Center })
+statusbar_init :: proc(statusbar: ^Statusbar, parent: ^Element) {
+	statusbar.stat = element_init(Element, parent, {}, statusbar_message, context.allocator)
+	statusbar.label_info = label_init(statusbar.stat, { .Label_Center })
 
-	task_panel = panel_init(stat, { .HF, .Panel_Horizontal }, 5, 5)
-	task_panel.color = &theme.panel[1]
-	task_panel.rounded = true
+	statusbar.task_panel = panel_init(statusbar.stat, { .HF, .Panel_Horizontal }, 5, 5)
+	statusbar.task_panel.color = &theme.panel[1]
+	statusbar.task_panel.rounded = true
 	
 	for i in 0..<len(Task_State) {
-		label_task_state[Task_State(i)] = label_init(task_panel, {})
+		statusbar.label_task_state[Task_State(i)] = label_init(statusbar.task_panel, {})
 	}
 	
-	label_task_state[.Normal].color = &theme.text_default
-	label_task_state[.Done].color = &theme.text_good
-	label_task_state[.Canceled].color = &theme.text_bad
+	statusbar.label_task_state[.Normal].color = &theme.text_default
+	statusbar.label_task_state[.Done].color = &theme.text_good
+	statusbar.label_task_state[.Canceled].color = &theme.text_bad
 
-	spacer_init(task_panel, {}, 2, DEFAULT_FONT_SIZE, .Full, true)
+	spacer_init(statusbar.task_panel, {}, 2, DEFAULT_FONT_SIZE, .Full, true)
 
-	label_task_count = label_init(task_panel, {})
+	statusbar.label_task_count = label_init(statusbar.task_panel, {})
 
-	vim_panel = panel_init(stat, { .HF, .Panel_Horizontal }, 5, 5)
-	vim_panel.color = &theme.text_good
-	vim_panel.rounded = true
-	vim_mode_label = vim_label_init(vim_panel, {})
+	statusbar.vim_panel = panel_init(statusbar.stat, { .HF, .Panel_Horizontal }, 5, 5)
+	statusbar.vim_panel.color = &theme.text_good
+	statusbar.vim_panel.rounded = true
+	statusbar.vim_mode_label = vim_label_init(statusbar.vim_panel, {})
 }
 
 statusbar_message :: proc(element: ^Element, msg: Message, di: int, dp: rawptr) -> int {
@@ -113,7 +113,7 @@ statusbar_message :: proc(element: ^Element, msg: Message, di: int, dp: rawptr) 
 	return 0
 }
 
-statusbar_update :: proc(using statusbar: ^Statusbar) {
+statusbar_update :: proc(statusbar: ^Statusbar) {
 	// update checkbox if hidden by key command
 	// {
 	// 	checkbox := &sb.options.checkbox_hide_statusbar
@@ -122,15 +122,15 @@ statusbar_update :: proc(using statusbar: ^Statusbar) {
 	// 	}
 	// }
 
-	if .Hide in stat.flags {
+	if .Hide in statusbar.stat.flags {
 		return
 	}
 
-	element_hide(vim_panel, !options_vim_use())
+	element_hide(statusbar.vim_panel, !options_vim_use())
 
 	// info
 	{
-		b := &label_info.builder
+		b := &statusbar.label_info.builder
 		strings.builder_reset(b)
 
 		if app.task_head == -1 {
@@ -176,7 +176,7 @@ statusbar_update :: proc(using statusbar: ^Statusbar) {
 
 	// tasks
 	for state, i in Task_State {
-		label := label_task_state[state]
+		label := statusbar.label_task_state[state]
 		b := &label.builder
 		strings.builder_reset(b)
 		strings.write_string(b, task_names[i])
@@ -201,7 +201,7 @@ statusbar_update :: proc(using statusbar: ^Statusbar) {
 		}
 		total += hidden
 		
-		b := &label_task_count.builder
+		b := &statusbar.label_task_count.builder
 		strings.builder_reset(b)
 
 		when POOL_DEBUG {

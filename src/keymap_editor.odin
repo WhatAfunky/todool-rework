@@ -44,7 +44,10 @@ keymap_editor_window_message :: proc(element: ^Element, msg: Message, di: int, d
 						return 0
 					}
 
-					value := strconv.atoi(combo)
+					value, ok := strconv.parse_int(combo)
+          if !ok {
+            return 0
+          }
 					grid := ke.grids[value - 1]
 					// ke.grid_keep_in_frame = grid
 					state := grid.hide_cells

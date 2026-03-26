@@ -823,16 +823,16 @@ element_box_mouse_selection :: proc(
 
 	// single character collision
 	mcs_check_single :: proc(
-		using mcs: ^Mouse_Character_Selection,
+		mcs: ^Mouse_Character_Selection,
 		b: ^Box,
 		codepoint_index: int,
 		dragging: bool,
 	) -> bool {
-		if relative_x < x && 
-			old_y < relative_y && 
-			relative_y < y {
-			goal := ((x - old_x) / 2 + old_x)
-			comp := relative_x > goal
+		if mcs.relative_x < mcs.x && 
+			mcs.old_y < mcs.relative_y && 
+			mcs.relative_y < mcs.y {
+			goal := ((mcs.x - mcs.old_x) / 2 + mcs.old_x)
+			comp := mcs.relative_x > goal
 			off := int(comp)
 
 			if !dragging {
@@ -853,15 +853,15 @@ element_box_mouse_selection :: proc(
 	// old_x is word_start_x
 	// x is word_end_x
 	mcs_check_word :: proc(
-		using mcs: ^Mouse_Character_Selection,
+		mcs: ^Mouse_Character_Selection,
 		b: ^Box,
 		word_start: int,
 		word_end: int,
 	) -> bool {
-		if old_x < relative_x && 
-			relative_x < x && 
-			old_y < relative_y && 
-			relative_y < y {
+		if mcs.old_x < mcs.relative_x && 
+			mcs.relative_x < mcs.x && 
+			mcs.old_y < mcs.relative_y && 
+			mcs.relative_y < mcs.y {
 			// set first result of word selection, further selection extends range
 			if !b.word_selection_started {
 				b.word_selection_started = true
@@ -875,10 +875,10 @@ element_box_mouse_selection :: proc(
 
 			// visually position the caret left / right when selecting the first word
 			if word_start == b.word_start && word_end == b.word_end {
-				diff := x - old_x
+				diff := mcs.x - mcs.old_x
 				
 				// middle of word crossed, swap
-				if old_x < relative_x && relative_x < old_x + diff / 2 {
+				if mcs.old_x < mcs.relative_x && mcs.relative_x < mcs.old_x + diff / 2 {
 					low, high = high, low
 				}
 			}
@@ -899,15 +899,14 @@ element_box_mouse_selection :: proc(
 	}
 
 	// clamp to left when x is below 0 and y above 
-	mcs_check_line_last :: proc(using mcs: ^Mouse_Character_Selection, b: ^Box) {
-		if relative_y > y {
-			b.head = codepoint_offset
+	mcs_check_line_last :: proc(mcs: ^Mouse_Character_Selection, b: ^Box) {
+		if mcs.relative_y > mcs.y {
+			b.head = mcs.codepoint_offset
 		}
 	}
 
-	using mcs
-	relative_x = element.window.cursor_x - element.bounds.l + int(x_offset)
-	relative_y = element.window.cursor_y - element.bounds.t
+	mcs.relative_x = element.window.cursor_x - element.bounds.l + int(x_offset)
+	mcs.relative_y = element.window.cursor_y - element.bounds.t
 	// fmt.eprintln(relative_x, element.window.cursor_x, element.bounds.l, x_offset)
 
 	ctx := &gs.fc
@@ -925,13 +924,13 @@ element_box_mouse_selection :: proc(
 		// loop through lines
 		search_line: for text in b.wrapped_lines {
 			// set state
-			y += scaled_size
-			x = 0
-			old_x = 0
+			mcs.y += scaled_size
+			mcs.x = 0
+			mcs.old_x = 0
 
 			// clamp to left when x is below 0 and y above 
-			if relative_x < 0 && relative_y < old_y {
-				b.head = codepoint_offset
+			if mcs.relative_x < 0 && mcs.relative_y < mcs.old_y {
+				b.head = mcs.codepoint_offset
 				break
 			}
 
@@ -941,38 +940,38 @@ element_box_mouse_selection :: proc(
 			index: int
 			quad: fontstash.Quad
 			for fontstash.TextIterNext(ctx, &iter, &quad) {
-				old_x = x
-				x = int(iter.nextx)
+				mcs.old_x = mcs.x
+				mcs.x = int(iter.nextx)
 
 				// check mouse collision
-				if mcs_check_single(&mcs, b, index + codepoint_offset, dragging) {
-					codepoint_offset += iter.codepointCount
+				if mcs_check_single(&mcs, b, index + mcs.codepoint_offset, dragging) {
+					mcs.codepoint_offset += iter.codepointCount
 					break search_line
 				}
 
 				index += 1
 			}
 
-			x += scaled_size
-			mcs_check_single(&mcs, b, iter.codepointCount + codepoint_offset, dragging)
-			codepoint_offset += iter.codepointCount
+			mcs.x += scaled_size
+			mcs_check_single(&mcs, b, iter.codepointCount + mcs.codepoint_offset, dragging)
+			mcs.codepoint_offset += iter.codepointCount
 
 			// do line end?
-			if relative_x > x && !dragging {
-				b.head = codepoint_offset
-				b.tail = codepoint_offset
+			if mcs.relative_x > mcs.x && !dragging {
+				b.head = mcs.codepoint_offset
+				b.tail = mcs.codepoint_offset
 				break search_line
 			}
 
-			old_y = y
+			mcs.old_y = mcs.y
 		}
 
 		mcs_check_line_last(&mcs, b)
 
 		// NOTE safety clamp in case we extended too far
-		b.head = min(b.head, codepoint_offset)
+		b.head = min(b.head, mcs.codepoint_offset)
 		if !dragging {
-			b.tail = min(b.tail, codepoint_offset)
+			b.tail = min(b.tail, mcs.codepoint_offset)
 		}
 	} else {
 		if clicks == 1 {
@@ -982,9 +981,9 @@ element_box_mouse_selection :: proc(
 			// loop through lines
 			search_line_word: for text in b.wrapped_lines {
 				// set state
-				old_x = 0 
-				x = 0
-				y += scaled_size
+				mcs.old_x = 0 
+				mcs.x = 0
+				mcs.y += scaled_size
 
 				// temp
 				index_word_start: int = -1
@@ -994,8 +993,8 @@ element_box_mouse_selection :: proc(
 				x_whitespace_start: int = -1
 
 				// clamp to left
-				if relative_x < 0 && relative_y < old_y && b.word_selection_started {
-					b.head = codepoint_offset
+				if mcs.relative_x < 0 && mcs.relative_y < mcs.old_y && b.word_selection_started {
+					b.head = mcs.codepoint_offset
 					break
 				}
 
@@ -1006,74 +1005,74 @@ element_box_mouse_selection :: proc(
 				for fontstash.TextIterNext(ctx, &iter, &quad) {
 					// check for word completion
 					if index_word_start != -1 && iter.codepoint == ' ' {
-						old_x = x_word_start
-						mcs_check_word(&mcs, b, codepoint_offset + index_word_start, codepoint_offset + index)
+						mcs.old_x = x_word_start
+						mcs_check_word(&mcs, b, mcs.codepoint_offset + index_word_start, mcs.codepoint_offset + index)
 						index_word_start = -1
 					}
 					
 					// check for starting codepoint being letter
 					if index_word_start == -1 && !unicode.is_space(iter.codepoint) {
 						index_word_start = index
-						x_word_start = x
+						x_word_start = mcs.x
 					}
 
 					// check for space word completion
 					if index_whitespace_start != -1 && !unicode.is_space(iter.codepoint) {
-						old_x = x_whitespace_start
-						mcs_check_word(&mcs, b, codepoint_offset + index_whitespace_start, codepoint_offset + index)
+						mcs.old_x = x_whitespace_start
+						mcs_check_word(&mcs, b, mcs.codepoint_offset + index_whitespace_start, mcs.codepoint_offset + index)
 						index_whitespace_start = -1
 					}
 
 					// check for starting whitespace being letter
 					if index_whitespace_start == -1 && iter.codepoint == ' ' {
 						index_whitespace_start = index
-						x_whitespace_start = x
+						x_whitespace_start = mcs.x
 					}
 
 					// set new position
-					x = int(iter.nextx)
+					mcs.x = int(iter.nextx)
 					codepoint_last = iter.codepoint
 					index += 1
 				}
 
 				// finish whitespace and end letter
 				if index_whitespace_start != -1 && codepoint_last == ' ' {
-					old_x = x_whitespace_start
-					mcs_check_word(&mcs, b, codepoint_offset + index_whitespace_start, codepoint_offset + iter.codepointCount)
+					mcs.old_x = x_whitespace_start
+					mcs_check_word(&mcs, b, mcs.codepoint_offset + index_whitespace_start, mcs.codepoint_offset + iter.codepointCount)
 				}
 
 				// finish end word
 				if index_word_start != -1 && !unicode.is_space(codepoint_last) {
-					old_x = x_word_start
-					mcs_check_word(&mcs, b, codepoint_offset + index_word_start, codepoint_offset + iter.codepointCount)
+					mcs.old_x = x_word_start
+					mcs_check_word(&mcs, b, mcs.codepoint_offset + index_word_start, mcs.codepoint_offset + iter.codepointCount)
 				}
 
-				old_y = y
-				codepoint_offset += iter.codepointCount
+				mcs.old_y = mcs.y
+				mcs.codepoint_offset += iter.codepointCount
 			}
 
 			mcs_check_line_last(&mcs, b)
 		} else {
 			// LINE
 			for text, line_index in b.wrapped_lines {
-				y += scaled_size
+				mcs.y += scaled_size
 				codepoints := cutf8.count(text)
 
-				if old_y < relative_y && relative_y < y {
+				if mcs.old_y < mcs.relative_y && mcs.relative_y < mcs.y {
 					if !b.line_selection_started {
-						b.line_selection_start = codepoint_offset
-						b.line_selection_end = codepoint_offset + codepoints
-						b.line_selection_start_y = y
+						b.line_selection_start = mcs.codepoint_offset
+						b.line_selection_end = mcs.codepoint_offset + codepoints
+						b.line_selection_start_y = mcs.y
 						b.line_selection_started = true
 					} 
 
-					goal_left := codepoint_offset
-					goal_right := codepoint_offset + codepoints
+					goal_left := mcs.codepoint_offset
+					goal_right := mcs.codepoint_offset + codepoints
 
 					low := min(goal_left, b.line_selection_start)
 					high := max(goal_right, b.line_selection_end)
 
-					if relative_y > b.line_selection_start_y {
+					if mcs.relative_y > b.line_selection_start_y {
 						low, high = high, low
 					}
 
@@ -1082,8 +1081,8 @@ element_box_mouse_selection :: proc(
 					break
 				}
 
-				codepoint_offset += codepoints
-				old_y = y
+				mcs.codepoint_offset += codepoints
+				mcs.old_y = mcs.y
 			}
 		}
 	}

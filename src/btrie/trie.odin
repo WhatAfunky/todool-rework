@@ -391,13 +391,13 @@ comp_bits_shortcut_text :: proc(field: ^u32) -> string {
 }
 
 comp_write_to_file :: proc(path: string) -> bool {
-	return os.write_entire_file(path, comp[:comp_index])
+  return os.write_entire_file(path, comp[:comp_index]) == nil
 }
 
 comp_read_from_file :: proc(path: string) {
-	content, ok := os.read_entire_file(path)
+	content, err := os.read_entire_file(path, context.allocator)
 
-	if ok {
+	if err != nil {
 		comp = content
 		comp_index = len(content)
 	}

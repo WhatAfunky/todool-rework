@@ -301,9 +301,9 @@ image_load_push :: proc(path: string) -> (res: ^Stored_Image) {
 
 // loads an image from a file
 image_load_from_file :: proc(path: string) -> (res: ^image.Image) {
-	content, ok := os.read_entire_file(path)
+	content, ok := os.read_entire_file(path, context.allocator)
 	
-	if !ok {
+	if ok != nil {
 		log.error("IMAGE: path not found", path)
 		return
 	}
@@ -1125,31 +1125,30 @@ window_build_combo :: proc(window: ^Window, key: sdl.KeyboardEvent) -> (res: str
 		return
 	}
 
-	using strings
 	b := &window.combo_builder
-	builder_reset(b)
+	strings.builder_reset(b)
 
 	if window.super {
-		write_string(b, "super ")
+		strings.write_string(b, "super ")
 	}
 	
 	if window.ctrl {
-		write_string(b, "ctrl ")
+		strings.write_string(b, "ctrl ")
 	}
 	
 	if window.shift {
-		write_string(b, "shift ")
+		strings.write_string(b, "shift ")
 	}
 	
 	if window.alt {
-		write_string(b, "alt ")
+		strings.write_string(b, "alt ")
 	}
 	
 	key_name := sdl.GetKeyName(key.keysym.sym)
-	write_string(b, string(key_name))
+	strings.write_string(b, string(key_name))
 
 	ok = true	
-	res = to_lower(to_string(b^), context.temp_allocator)
+	res = strings.to_lower(strings.to_string(b^), context.temp_allocator)
 	return
 }
 
@@ -1408,8 +1407,8 @@ gs_display_dpi :: proc(index: int) -> (ddpi, hdpi, vdpi: f32, ok: bool) {
 
 gs_init :: proc() {
 	gs = new(Global_State)
-	using gs
-	running = true
+	// using gs
+	gs.running = true
 
 	when TRACK_MEMORY {
 		mem.tracking_allocator_init(&track, context.allocator)
@@ -1427,27 +1426,27 @@ gs_init :: proc() {
 	sdl.SetHint(sdl.HINT_MOUSE_FOCUS_CLICKTHROUGH, "1") // mouse clickable 
 
 	// create cursors
-	cursors[.Arrow] = sdl.CreateSystemCursor(.ARROW)
-	cursors[.IBeam] = sdl.CreateSystemCursor(.IBEAM)
-	cursors[.Hand] = sdl.CreateSystemCursor(.HAND)
-	cursors[.Hand_Drag] = sdl.CreateSystemCursor(.SIZEALL)
-	cursors[.Resize_Horizontal] = sdl.CreateSystemCursor(.SIZEWE)
-	cursors[.Resize_Vertical] = sdl.CreateSystemCursor(.SIZENS)
-	cursors[.Crosshair] = sdl.CreateSystemCursor(.CROSSHAIR)
+	gs.cursors[.Arrow] = sdl.CreateSystemCursor(.ARROW)
+	gs.cursors[.IBeam] = sdl.CreateSystemCursor(.IBEAM)
+	gs.cursors[.Hand] = sdl.CreateSystemCursor(.HAND)
+	gs.cursors[.Hand_Drag] = sdl.CreateSystemCursor(.SIZEALL)
+	gs.cursors[.Resize_Horizontal] = sdl.CreateSystemCursor(.SIZEWE)
+	gs.cursors[.Resize_Vertical] = sdl.CreateSystemCursor(.SIZENS)
+	gs.cursors[.Crosshair] = sdl.CreateSystemCursor(.CROSSHAIR)
 
 	// get pref path
 	{
 		path := sdl.GetPrefPath("todool", "")
 		if path != nil {
-			pref_path = strings.clone_from_cstring(path)
+			gs.pref_path = strings.clone_from_cstring(path)
 			sdl.free(rawptr(path))
 		} else {
-			when os.OS == .Linux {
-				pref_path = ".\\"
+			when ODIN_OS == .Linux {
+				gs.pref_path = ".\\"
 			} 
 
-			when os.OS == .Windows {
-				pref_path = "./"
+			when ODIN_OS == .Windows {
+				gs.pref_path = "./"
 			}
 		}
 	}
@@ -1455,25 +1454,24 @@ gs_init :: proc() {
 	{
 		path := sdl.GetBasePath()
 		if path != nil {
-			base_path = strings.clone_from_cstring(path)
+			gs.base_path = strings.clone_from_cstring(path)
 			sdl.free(rawptr(path))
 		} 
 	}
 
 	// use file logger on release builds
-	log_path = strings.clone(bpath_temp("todool.log"))
+	gs.log_path = strings.clone(bpath_temp("todool.log"))
 
 	// write only, create new file if not exists, truncate file at start
-	when os.OS == .Linux {
+	when ODIN_OS == .Linux {
 		// all rights on linux
-		mode := 0o0777
-		log_file_handle, errno := os.open(log_path, os.O_WRONLY | os.O_CREATE | os.O_APPEND, mode)
+		log_file_handle, errno := os.open(gs.log_path, os.O_WRONLY | os.O_CREATE | os.O_APPEND)
 	} else {
 		log_file_handle, errno := os.open(log_path, os.O_WRONLY | os.O_CREATE | os.O_APPEND)
 	}
 
-	logger = log.create_file_logger(log_file_handle)
-	context.logger = logger
+	gs.logger = log.create_file_logger(log_file_handle)
+	context.logger = gs.logger
 
 	{
 		linked: sdl.version
@@ -1481,8 +1479,8 @@ gs_init :: proc() {
 		log.infof("SDL2: Linked Version %d.%d.%d", linked.major, linked.minor, linked.patch)
 	}
 
-	fontstash.Init(&fc, 500, 500, .TOPLEFT)
-	fc.callbackResize = proc(data: rawptr, w, h: int) {
+	fontstash.Init(&gs.fc, 500, 500, .TOPLEFT)
+	gs.fc.callbackResize = proc(data: rawptr, w, h: int) {
 		if data != nil {
 			// regenerate the texture on all windows
 			iter := gs_windows_iter_head()
@@ -1492,7 +1490,7 @@ gs_init :: proc() {
 			}
 		}
 	}
-	fc.callbackUpdate = proc(data: rawptr, dirty_rect: [4]f32, texture_data: rawptr) {
+	gs.fc.callbackUpdate = proc(data: rawptr, dirty_rect: [4]f32, texture_data: rawptr) {
 		// update the texture on all windows
 		if data != nil {
 			// NOTE need to update all window textures apparently
@@ -1506,8 +1504,8 @@ gs_init :: proc() {
 		}
 	}
 
-	animating = make([dynamic]^Element, 0, 32)
-	copy_builder = strings.builder_make(0, mem.Kilobyte)
+	gs.animating = make([dynamic]^Element, 0, 32)
+	gs.copy_builder = strings.builder_make(0, mem.Kilobyte)
 
 	// audio
 	{
@@ -1542,10 +1540,10 @@ gs_init :: proc() {
 		return interval
 	}
 
-	window_hovering_timer = sdl.AddTimer(500, window_check_hover_callback, nil)
-	strings.builder_init(&cstring_builder, 0, 128)
+	gs.window_hovering_timer = sdl.AddTimer(500, window_check_hover_callback, nil)
+	strings.builder_init(&gs.cstring_builder, 0, 128)
 
-	stored_images = make([dynamic]Stored_Image, 0, 8)
+	gs.stored_images = make([dynamic]Stored_Image, 0, 8)
 	clipboard_get_with_builder()
 }
 
@@ -1564,28 +1562,28 @@ gs_check_leaks :: proc(ta: ^mem.Tracking_Allocator) {
 }
 
 gs_destroy :: proc() {
-	using gs
+	// using gs
 
 	for index in Sound_Index {
-		path := sound_paths[index]
+		path := gs.sound_paths[index]
 		if path != "" {
 			delete(path)
 		}
 	}
 
-	if font_regular_path != "" {
-		delete(font_regular_path)
+	if gs.font_regular_path != "" {
+		delete(gs.font_regular_path)
 	} 
 
-	if font_bold_path != "" {
-		delete(font_bold_path)
+	if gs.font_bold_path != "" {
+		delete(gs.font_bold_path)
 	}
 
-	delete(animating)
-	delete(copy_builder.buf)
-	delete(cstring_builder.buf)
+	delete(gs.animating)
+	delete(gs.copy_builder.buf)
+	delete(gs.cstring_builder.buf)
 
-	sdl.RemoveTimer(window_hovering_timer)
+	sdl.RemoveTimer(gs.window_hovering_timer)
 
 	if gs.stored_image_thread != nil {
 		thread.terminate(gs.stored_image_thread, 0)
@@ -1594,18 +1592,18 @@ gs_destroy :: proc() {
 	}
 	delete(gs.stored_images)
 
-	for sound in sounds {
+	for sound in gs.sounds {
 		mix.FreeChunk(sound)
 	}
 
 	mix.Quit()
-	fontstash.Destroy(&fc)
+	fontstash.Destroy(&gs.fc)
 
 	// based on mode
-	log.destroy_file_logger(logger)
-	delete(log_path)
-	delete(pref_path)
-	delete(base_path)
+	log.destroy_file_logger(gs.logger)
+	delete(gs.log_path)
+	delete(gs.pref_path)
+	delete(gs.base_path)
 
 	when TRACK_MEMORY {
 		gs_check_leaks(&track)
@@ -1615,7 +1613,7 @@ gs_destroy :: proc() {
 	// reset allocator after being done!
 	context.allocator = runtime.default_allocator()
 
-	for cursor in cursors {
+	for cursor in gs.cursors {
 		sdl.FreeCursor(cursor)
 	}
 
@@ -2028,11 +2026,13 @@ bpath_temp :: proc(path: string) -> string {
 }
 
 bpath_file_write :: proc(path: string, content: []byte) -> bool {
-	return os.write_entire_file(bpath_temp(path), content)
+  err := os.write_entire_file(bpath_temp(path), content)
+  return err == nil
 }
 
 bpath_file_read :: proc(path: string, allocator := context.allocator) -> ([]byte, bool) {
-	return os.read_entire_file(bpath_temp(path), allocator)
+  result, err := os.read_entire_file(bpath_temp(path), allocator)
+  return result, err == nil
 }
 
 //////////////////////////////////////////////
@@ -2041,12 +2041,15 @@ bpath_file_read :: proc(path: string, allocator := context.allocator) -> ([]byte
 
 gs_write_safely :: proc(path: string, content: []byte) -> bool {
 	temp_path := fmt.tprintf("%s.temp", path)
-	os.write_entire_file(temp_path, content) or_return
+	ok := os.write_entire_file(temp_path, content)
+  if ok != nil {
+    return false
+  }
 
 	// no error
-	when os.OS == .Windows {
+	when ODIN_OS == .Windows {
 		os.rename(temp_path, path)
-	} else when os.OS == .Linux {
+	} else when ODIN_OS == .Linux {
 		os.rename(temp_path, path)
 	}
 

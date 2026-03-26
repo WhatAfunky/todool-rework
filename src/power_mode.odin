@@ -46,32 +46,27 @@ PM_Particle :: struct {
 }
 
 power_mode_init :: proc() {
-	using pm_state
-	particles = make([dynamic]PM_Particle, 0, 256)
-	color_seed = intrinsics.read_cycle_counter()
+	pm_state.particles = make([dynamic]PM_Particle, 0, 256)
+	pm_state.color_seed = intrinsics.read_cycle_counter()
 }
 
 power_mode_destroy :: proc() {
-	using pm_state
-	delete(particles)
+	delete(pm_state.particles)
 }
 
 power_mode_clear :: proc() {
-	using pm_state
-	clear(&particles)
-	color_count = 0
+	clear(&pm_state.particles)
+	pm_state.color_count = 0
 }
 
 power_mode_check_spawn :: proc() {
-	using pm_state
-
 	if !pm_show() {
 		return
 	}
 
-	if spawn_next {
+	if pm_state.spawn_next {
 		power_mode_spawn_at_caret()
-		spawn_next = false
+		pm_state.spawn_next = false
 	}
 }
 
@@ -156,8 +151,6 @@ power_mode_spawn_at :: proc(
 	color := Color {},
 	delay: f32 = 0,
 ) {
-	using pm_state
-
 	width := 20 * TASK_SCALE
 	height := DEFAULT_FONT_SIZE * TASK_SCALE * 2
 	size := 3 * TASK_SCALE
@@ -178,11 +171,11 @@ power_mode_spawn_at :: proc(
 		c := color 
 		if c == {} {
 			// normalize to 0 -> 1
-			value := (noise.noise_2d(color_seed, { color_count * 0.01, 0 }) + 1) / 2
+			value := (noise.noise_2d(pm_state.color_seed, { pm_state.color_count * 0.01, 0 }) + 1) / 2
 			c = color_hsv_to_rgb(value, 1, 1)
 		}
 
-		append(&particles, PM_Particle {
+		append(&pm_state.particles, PM_Particle {
 			lifetime = life,
 			lifetime_count = life,
 			delay = d,
@@ -198,19 +191,17 @@ power_mode_spawn_at :: proc(
 			seed = intrinsics.read_cycle_counter(),
 		})
 
-		color_count += 1
+		pm_state.color_count += 1
 	}
 }
 
 power_mode_update :: proc() {
-	using pm_state
-
 	if !pm_show() {
 		return
 	}
 	
-	for i := len(particles) - 1; i >= 0; i -= 1 {
-		p := &particles[i]
+	for i := len(pm_state.particles) - 1; i >= 0; i -= 1 {
+		p := &pm_state.particles[i]
 
 		if p.delay > 0 {
 			p.delay -= gs.dt
@@ -224,14 +215,12 @@ power_mode_update :: proc() {
 			p.x += x_dir * TASK_SCALE * TASK_SCALE
 			p.y += y_dir * TASK_SCALE * TASK_SCALE
 		} else {
-			unordered_remove(&particles, i)
+			unordered_remove(&pm_state.particles, i)
 		}
 	}
 }
 
 power_mode_render :: proc(target: ^Render_Target) {
-	using pm_state
-
 	if !pm_show() {
 		return
 	}
@@ -240,8 +229,8 @@ power_mode_render :: proc(target: ^Render_Target) {
 	xoff, yoff: f32
 	alpha_opt := pm_particle_alpha_scale()
 
-	for i := len(particles) - 1; i >= 0; i -= 1 {
-		p := &particles[i]
+	for i := len(pm_state.particles) - 1; i >= 0; i -= 1 {
+		p := &pm_state.particles[i]
 
 		if p.delay > 0 {
 			continue
@@ -251,7 +240,7 @@ power_mode_render :: proc(target: ^Render_Target) {
 
 		// when alpha has reached 0 we can shortcut here
 		if alpha == 0 {
-			unordered_remove(&particles, i)
+			unordered_remove(&pm_state.particles, i)
 			continue
 		}
 
@@ -268,13 +257,11 @@ power_mode_running :: #force_inline proc() -> bool {
 }
 
 power_mode_issue_spawn :: #force_inline proc() {
-	using pm_state
-
 	if !pm_show() {
 		return
 	}
 
-	spawn_next = true
+	pm_state.spawn_next = true
 
 	cam := mode_panel_cam()
 	cam_screenshake_reset(cam)
@@ -285,11 +272,9 @@ cam_screenshake_reset :: #force_inline proc(cam: ^Pan_Camera) {
 }
 
 power_mode_set_caret_color :: proc() {
-  using pm_state
-
   if app.task_head != -1 {
   	task := app_task_head()
   	// TODO make this syntax based instead
-  	caret_color = theme_task_text(task.state)
+  	pm_state.caret_color = theme_task_text(task.state)
   }	
 }

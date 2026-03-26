@@ -61,20 +61,20 @@ Decode_State :: struct {
 }
 
 // decode until the word ended using state
-ds_iter :: proc(using ds: ^Decode_State, text: string) -> (
+ds_iter :: proc(ds: ^Decode_State, text: string) -> (
 	codepoint: rune, 
 	codepoint_index: int, 
 	ok: bool,
 ) {
-	byte_offset_old = byte_offset
+	ds.byte_offset_old = ds.byte_offset
 
 	// advance till the next codepoint is done
-	for byte_offset < len(text) {
-		byte_offset += 1
+	for ds.byte_offset < len(text) {
+		ds.byte_offset += 1
 
-		if decode(&state, &codepoint, text[byte_offset - 1]) {
-			codepoint_index = codepoint_count
-			codepoint_count += 1
+		if decode(&ds.state, &codepoint, text[ds.byte_offset - 1]) {
+			codepoint_index = ds.codepoint_count
+			ds.codepoint_count += 1
 			ok = true
 			return
 		}
@@ -83,39 +83,39 @@ ds_iter :: proc(using ds: ^Decode_State, text: string) -> (
 	return
 }
 
-ds_recount :: proc(using ds: ^Decode_State, text: string) -> int {
+ds_recount :: proc(ds: ^Decode_State, text: string) -> int {
 	ds^ = {}
 	codepoint: rune
 
-	for byte_offset < len(text) {
-		if decode(&state, &codepoint, text[byte_offset]) {
-			codepoint_count += 1
+	for ds.byte_offset < len(text) {
+		if decode(&ds.state, &codepoint, text[ds.byte_offset]) {
+			ds.codepoint_count += 1
 		}
 
-		byte_offset += 1
+		ds.byte_offset += 1
 	}
 
-	return codepoint_count
+	return ds.codepoint_count
 }
 
 ds_string_till_codepoint_index :: proc(
-	using ds: ^Decode_State, 
+	ds: ^Decode_State, 
 	text: string, 
 	codepoint_index: int,
 ) -> (res: string) {
 	ds^ = {}
 	codepoint: rune
 
-	for byte_offset < len(text) {
-		byte_offset += 1
+	for ds.byte_offset < len(text) {
+		ds.byte_offset += 1
 		
-		if decode(&state, &codepoint, text[byte_offset - 1]) {
-			if codepoint_index == codepoint_count {
-				res = text[:byte_offset - 1]
+		if decode(&ds.state, &codepoint, text[ds.byte_offset - 1]) {
+			if codepoint_index == ds.codepoint_count {
+				res = text[:ds.byte_offset - 1]
 				return
 			}
 
-			codepoint_count += 1
+			ds.codepoint_count += 1
 		}
 	}
 	
@@ -123,32 +123,32 @@ ds_string_till_codepoint_index :: proc(
 }
 
 ds_byte_offset_till_codepoint_index :: proc(
-	using ds: ^Decode_State,
+	ds: ^Decode_State,
 	text: string,
 	codepoint_index: int,
 ) -> (res: int) {
 	ds^ = {}
 	codepoint: rune
 
-	for byte_offset < len(text) {
-		if decode(&state, &codepoint, text[byte_offset]) {
-			if codepoint_index == codepoint_count {
-				res = byte_offset
+	for ds.byte_offset < len(text) {
+		if decode(&ds.state, &codepoint, text[ds.byte_offset]) {
+			if codepoint_index == ds.codepoint_count {
+				res = ds.byte_offset
 				return
 			}
 
-			codepoint_count += 1
+			ds.codepoint_count += 1
 		}
 
-		byte_offset += 1
+		ds.byte_offset += 1
 	}
 	
-	return byte_offset
+	return ds.byte_offset
 }
 
 // decode until the word ended using state
 ds_string_selection :: proc(
-	using ds: ^Decode_State, 
+	ds: ^Decode_State, 
 	text: string,
 	low, high: int,
 ) -> (res: string, ok: bool) {
@@ -156,25 +156,25 @@ ds_string_selection :: proc(
 	start := -1
 	end := -1
 
-	for byte_offset < len(text) {
-		if decode(&state, &codepoint, text[byte_offset]) {
-			if low == codepoint_count {
-				start = byte_offset
+	for ds.byte_offset < len(text) {
+		if decode(&ds.state, &codepoint, text[ds.byte_offset]) {
+			if low == ds.codepoint_count {
+				start = ds.byte_offset
 			}
 
-			if high == codepoint_count {
-				end = byte_offset
+			if high == ds.codepoint_count {
+				end = ds.byte_offset
 			}
 
 			// codepoint_index = codepoint_count
-			codepoint_count += 1
+			ds.codepoint_count += 1
 		}
 
-		byte_offset += 1
+		ds.byte_offset += 1
 	}
 
-	if end == -1 && codepoint_count == high {
-		end = codepoint_count
+	if end == -1 && ds.codepoint_count == high {
+		end = ds.codepoint_count
 	}
 
 	if start != -1 && end != -1 {

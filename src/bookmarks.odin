@@ -15,14 +15,12 @@ Bookmark_State :: struct {
 bs: Bookmark_State
 
 bookmark_state_init :: proc() {
-	using bs
-	current_index = -1
-	rows = make([dynamic]^Task, 0, 32)
+	bs.current_index = -1
+	bs.rows = make([dynamic]^Task, 0, 32)
 }
 
 bookmark_state_destroy :: proc() {
-	using bs
-	delete(rows)
+	delete(bs.rows)
 }
 
 bookmark_nearest_index :: proc(backward: bool) -> int {

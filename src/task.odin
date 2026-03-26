@@ -2325,7 +2325,10 @@ goto_init :: proc(window: ^Window) {
 
 		#partial switch msg {
 			case .Value_Changed: {
-				value := strconv.atoi(ss_string(&box.ss))
+				value, ok := strconv.parse_int(ss_string(&box.ss))
+        if !ok {
+          return 0
+        }
 				old_head := app.task_head
 				old_tail := app.task_tail
 
@@ -2469,10 +2472,10 @@ tasks_load_file :: proc() {
 	
 	if len(app.last_save_location.buf) != 0 {
 		file_path := strings.to_string(app.last_save_location)
-		file_data, ok := os.read_entire_file(file_path)
+		file_data, ok := os.read_entire_file(file_path, context.allocator)
 		defer delete(file_data)
 
-		if !ok {
+		if err != nil {
 			log.infof("LOAD: File not found %s\n", file_path)
 			return
 		}
@@ -3255,14 +3258,14 @@ open_folder :: proc(path: string) {
 	libc.system(cstring(raw_data(b.buf)))		
 }
 
-caret_state_update_motion :: proc(using state: ^Caret_State, allow_last: bool) -> bool {
+caret_state_update_motion :: proc(state: ^Caret_State, allow_last: bool) -> bool {
 	return caret_animate() && 
 		caret_motion() && 
-		!motion_skip && 
-		(int(motion_last_x) != rect.l || int(motion_last_y) != rect.t || (allow_last && motion_last_frame))
+		!state.motion_skip && 
+		(int(state.motion_last_x) != state.rect.l || int(state.motion_last_y) != state.rect.t || (allow_last && state.motion_last_frame))
 }
 
-caret_state_update_alpha :: proc(using state: ^Caret_State) -> bool {
+caret_state_update_alpha :: proc(state: ^Caret_State) -> bool {
 	return caret_animate() && caret_alpha()
 }
 
@@ -3270,11 +3273,11 @@ caret_state_real_alpha :: proc(state: ^Caret_State) -> f32 {
 	return caret_state_update_alpha(state) ? 1 - clamp(state.alpha * state.alpha * state.alpha, 0, 1) : 1
 }
 
-caret_state_update_outline :: proc(using state: ^Caret_State) -> bool {
+caret_state_update_outline :: proc(state: ^Caret_State) -> bool {
 	return caret_animate() && 
 		caret_motion() && 
-		!motion_skip && 
-		outline_goal != outline_current
+		!state.motion_skip && 
+		state.outline_goal != state.outline_current
 }
 
 Motion_Rect_Iter :: struct {
@@ -3318,12 +3321,12 @@ motion_rect_iter :: proc(iter: ^Motion_Rect_Iter) -> (res: RectF, step: f32, ok:
 }
 
 // draw an animated caret rect
-caret_state_render :: proc(target: ^Render_Target, using state: ^Caret_State) {
+caret_state_render :: proc(target: ^Render_Target, state: ^Caret_State) {
 	real_alpha := caret_state_real_alpha(state)
-	motion_last_frame = false
+	state.motion_last_frame = false
 
 	if caret_state_update_motion(state, false) {
-		iter := motion_rect_init(rect, motion_last_x, motion_last_y, motion_count)
+		iter := motion_rect_init(state.rect, state.motion_last_x, state.motion_last_y, state.motion_count)
 
 		for rect, step in motion_rect_iter(&iter) {
 			r := rect_ftoi(rect)
@@ -3339,43 +3342,43 @@ caret_state_render :: proc(target: ^Render_Target, using state: ^Caret_State) {
 		// 	power_mode_spawn_at(motion_last_x, motion_last_y + vert_off, xoff, yoff, 1, color)
 		// }
 
-		motion_last_frame = true
+		state.motion_last_frame = true
 	} else {
-		motion_last_x = f32(rect.l)
-		motion_last_y = f32(rect.t)
+		state.motion_last_x = f32(state.rect.l)
+		state.motion_last_y = f32(state.rect.t)
 
 		color := color_alpha(theme.caret, real_alpha)
-		render_rect(target, rect, color, 0)
+		render_rect(target, state.rect, color, 0)
 	}
 
 	// skip trail rendering
-	if motion_skip {
-		motion_last_x = f32(rect.l)
-		motion_last_y = f32(rect.t)
-		motion_skip = false
+	if state.motion_skip {
+		state.motion_last_x = f32(state.rect.l)
+		state.motion_last_y = f32(state.rect.t)
+		state.motion_skip = false
 	} else {
-		animate_to(&motion_last_x, f32(rect.l), 4, 0.1)
-		animate_to(&motion_last_y, f32(rect.t), 4, 0.1)
+		animate_to(&state.motion_last_x, f32(state.rect.l), 4, 0.1)
+		animate_to(&state.motion_last_y, f32(state.rect.t), 4, 0.1)
 	}
 
 	caret_state_increase_alpha(state)
 }
 
-caret_state_increase_alpha :: proc(using state: ^Caret_State) {
+caret_state_increase_alpha :: proc(state: ^Caret_State) {
 	if caret_state_update_alpha(state) {
 		speed := visuals_animation_speed()
 
-		if alpha_forwards {
-			if alpha <= 1 {
-				alpha += gs.dt * speed
+		if state.alpha_forwards {
+			if state.alpha <= 1 {
+				state.alpha += gs.dt * speed
 			} else {
-				alpha_forwards = false
+				state.alpha_forwards = false
 			}
 		} else {
-			if alpha >= 0 {
-				alpha -= gs.dt * speed
+			if state.alpha >= 0 {
+				state.alpha -= gs.dt * speed
 			} else {
-				alpha_forwards = true
+				state.alpha_forwards = true
 			}
 		}
 	}
