@@ -46,11 +46,11 @@ cam_check :: proc(cam: ^Pan_Camera, type: Cam_Check_Type, frames := int(1)) {
 }
 
 // update lifetime
-cam_update_screenshake :: proc(using cam: ^Pan_Camera, update: bool) {
+cam_update_screenshake :: proc(cam: ^Pan_Camera, update: bool) {
 	if !pm_screenshake_use() || !pm_show() {
-		screenshake_x = 0
-		screenshake_y = 0
-		screenshake_counter = 0
+		cam.screenshake_x = 0
+		cam.screenshake_y = 0
+		cam.screenshake_counter = 0
 		return
 	} 
 
@@ -60,17 +60,17 @@ cam_update_screenshake :: proc(using cam: ^Pan_Camera, update: bool) {
 		y := (rand.float32() * 2 - 1)
 		shake := pm_screenshake_amount() // skake amount in px
 		lifetime_opt := pm_screenshake_lifetime()
-		screenshake_x = x * max(shake - screenshake_counter * shake * 2 * lifetime_opt, 0)
-		screenshake_y = y * max(shake - screenshake_counter * shake * 2 * lifetime_opt, 0)
-		screenshake_counter += gs.dt
+		cam.screenshake_x = x * max(shake - cam.screenshake_counter * shake * 2 * lifetime_opt, 0)
+		cam.screenshake_y = y * max(shake - cam.screenshake_counter * shake * 2 * lifetime_opt, 0)
+		cam.screenshake_counter += gs.dt
 	} else {
-		screenshake_x = 0
-		screenshake_y = 0
-		screenshake_counter = 0
+		cam.screenshake_x = 0
+		cam.screenshake_y = 0
+		cam.screenshake_counter = 0
 	}
 }
 
-cam_update_check :: proc(using cam: ^Pan_Camera) {
+cam_update_check :: proc(cam: ^Pan_Camera) {
 	if cam.check_next_index >= 0 {
 		cam.check_next_index -= 1
 
@@ -133,16 +133,15 @@ cam_animate :: proc(cam: ^Pan_Camera, x: bool) -> bool {
 	a := x ? &cam.ax : &cam.ay
 	off := x ? &cam.offset_x : &cam.offset_y
 	lerp := x ? &app.caret.lerp_speed_x : &app.caret.lerp_speed_y
-	using a
 
-	if cam.freehand || !animating {
+	if cam.freehand || !a.animating {
 		return false
 	}
 
-	real_goal := direction == CAM_CENTER ? f32(goal) : off^ + f32(direction * goal)
+	real_goal := a.direction == CAM_CENTER ? f32(a.goal) : off^ + f32(a.direction * a.goal)
 	// fmt.eprintln("real_goal", x ? "x" : "y", direction == 0, real_goal, off^, direction)
 	res := animate_to_state(
-		&animating,
+		&a.animating,
 		off,
 		real_goal,
 		1 + lerp^,

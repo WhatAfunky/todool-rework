@@ -61,19 +61,17 @@ search_state_init :: proc() {
 }
 
 search_state_destroy :: proc() {
-	using search
-	delete(entries)
-	delete(results)
-	result_count = nil
+	delete(search.entries)
+	delete(search.results)
+	search.result_count = nil
 }
 
 // clear count and reset write slice
 search_clear :: proc() {
-	using search
-	clear(&entries)
-	clear(&results)
-	result_count = nil
-	current_index = -1
+	clear(&search.entries)
+	clear(&search.results)
+	search.result_count = nil
+	search.current_index = -1
 }
 
 search_has_results :: proc() -> bool {
@@ -82,14 +80,13 @@ search_has_results :: proc() -> bool {
 
 // push a ptr and set current counter
 search_push_task :: proc(task: ^Task) {
-	using search
-	append(&entries, Search_Entry {
+	append(&search.entries, Search_Entry {
 		task,
 		0,
-		len(results),
+		len(search.results),
 	})
-	entry := &entries[len(entries) - 1]
-	result_count = &entry.length
+	entry := &search.entries[len(search.entries) - 1]
+	search.result_count = &entry.length
 }
 
 search_pop_task :: proc() {
@@ -180,22 +177,20 @@ search_update :: proc(pattern: string) {
 }
 
 search_find :: proc(backwards: bool) {
-	using search
-
-	if len(results) == 0 {
+	if len(search.results) == 0 {
 		return
 	}
 
-	range_advance_index(&current_index, len(results) - 1, backwards)
+	range_advance_index(&search.current_index, len(search.results) - 1, backwards)
 
 	task: ^Task
 	result_index: int
 	length_sum: int
-	for entry, i in entries {
+	for entry, i in search.entries {
 		// in correct space
-		if length_sum + int(entry.length) > current_index {
+		if length_sum + int(entry.length) > search.current_index {
 			task = entry.ptr
-			result_index = entry.result_offset + (current_index - length_sum)
+			result_index = entry.result_offset + (search.current_index - length_sum)
 			break
 		}
 
@@ -205,7 +200,7 @@ search_find :: proc(backwards: bool) {
 	app.task_head = task.filter_index
 	app.task_tail = task.filter_index
 
-	result := results[result_index]
+	result := search.results[result_index]
 	text := task_string(task)
 	task.box.head = int(result.end)
 	task.box.tail = int(result.start)

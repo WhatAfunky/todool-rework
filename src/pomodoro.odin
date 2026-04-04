@@ -86,11 +86,11 @@ pomodoro_celebration_render :: proc(target: ^Render_Target) {
 }
 
 // NOTE same as before, just return diff
-time_stop_stopwatch :: proc(using stopwatch: ^time.Stopwatch) -> (diff: time.Duration) {
-	if running {
-		diff = time.tick_diff(_start_time, time.tick_now())
-		_accumulation += diff
-		running = false
+time_stop_stopwatch :: proc(stopwatch: ^time.Stopwatch) -> (diff: time.Duration) {
+	if stopwatch.running {
+		diff = time.tick_diff(stopwatch._start_time, time.tick_now())
+		stopwatch._accumulation += diff
+		stopwatch.running = false
 	}
 
 	return

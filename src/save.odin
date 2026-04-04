@@ -1177,28 +1177,26 @@ json_load_misc :: proc(path: string) -> bool {
 	// power mode
 	{
 		temp := &sb.options.pm	
-		using temp
 
 		if misc.power_mode != {} {
-			checkbox_set(ps_show, misc.power_mode.show)
-			drag_float_set(p_lifetime, misc.power_mode.particle_lifetime)
-			drag_float_set(p_alpha_scale, misc.power_mode.particle_alpha_scale)
-			checkbox_set(p_colored, misc.power_mode.particle_colored)
-			checkbox_set(s_use, misc.power_mode.screenshake_use)
-			drag_float_set(s_amount, misc.power_mode.screenshake_amount)
-			drag_float_set(s_lifetime, misc.power_mode.screenshake_lifetime)
+			checkbox_set(temp.ps_show, misc.power_mode.show)
+			drag_float_set(temp.p_lifetime, misc.power_mode.particle_lifetime)
+			drag_float_set(temp.p_alpha_scale, misc.power_mode.particle_alpha_scale)
+			checkbox_set(temp.p_colored, misc.power_mode.particle_colored)
+			checkbox_set(temp.s_use, misc.power_mode.screenshake_use)
+			drag_float_set(temp.s_amount, misc.power_mode.screenshake_amount)
+			drag_float_set(temp.s_lifetime, misc.power_mode.screenshake_lifetime)
 		}
 	}
 	
 	// caret
 	{
 		temp := &sb.options.caret
-		using temp
 
 		if misc.caret != {} {
-			checkbox_set(animate, misc.caret.use_animations)
-			checkbox_set(motion, misc.caret.use_motion)
-			checkbox_set(alpha, misc.caret.use_alpha)
+			checkbox_set(temp.animate, misc.caret.use_animations)
+			checkbox_set(temp.motion, misc.caret.use_motion)
+			checkbox_set(temp.alpha, misc.caret.use_alpha)
 		}
 	}
 	

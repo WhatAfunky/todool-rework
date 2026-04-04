@@ -336,19 +336,18 @@ sidebar_enum_panel_init :: proc(parent: ^Element) {
 	// options
 	{
 		temp := &sb.options
-		using temp
 		flags := Element_Flags { .HF }
 
-		panel = shared_panel(enum_panel, "Options")
+		temp.panel = shared_panel(enum_panel, "Options")
 
-		checkbox_autosave = checkbox_init(panel, flags, "Autosave", true)
-		checkbox_autosave.hover_info = "Autosave on exit & opening different files"
-		checkbox_uppercase_word = checkbox_init(panel, flags, "Uppercase Parent Word", true)
-		checkbox_uppercase_word.hover_info = "Uppercase the task text when inserting a new child"
-		checkbox_invert_x = checkbox_init(panel, flags, "Invert Scroll X", false)
-		checkbox_invert_y = checkbox_init(panel, flags, "Invert Scroll Y", false)
-		checkbox_bordered = checkbox_init(panel, flags, "Borderless Window", false)
-		checkbox_bordered.message_user = proc(element: ^Element, msg: Message, di: int, dp: rawptr) -> int {
+		temp.checkbox_autosave = checkbox_init(temp.panel, flags, "Autosave", true)
+		temp.checkbox_autosave.hover_info = "Autosave on exit & opening different files"
+		temp.checkbox_uppercase_word = checkbox_init(temp.panel, flags, "Uppercase Parent Word", true)
+		temp.checkbox_uppercase_word.hover_info = "Uppercase the task text when inserting a new child"
+		temp.checkbox_invert_x = checkbox_init(temp.panel, flags, "Invert Scroll X", false)
+		temp.checkbox_invert_y = checkbox_init(temp.panel, flags, "Invert Scroll Y", false)
+		temp.checkbox_bordered = checkbox_init(temp.panel, flags, "Borderless Window", false)
+		temp.checkbox_bordered.message_user = proc(element: ^Element, msg: Message, di: int, dp: rawptr) -> int {
 			if msg == .Value_Changed {
 				checkbox := cast(^Checkbox) element
 				window_border_set(checkbox.window, !checkbox.state)
@@ -356,133 +355,130 @@ sidebar_enum_panel_init :: proc(parent: ^Element) {
 
 			return 0
 		}
-		checkbox_hide_statusbar = checkbox_init(panel, flags, "Hide Statusbar", false)
-		checkbox_hide_statusbar.invoke = proc(box: ^Checkbox) {
+		temp.checkbox_hide_statusbar = checkbox_init(temp.panel, flags, "Hide Statusbar", false)
+		temp.checkbox_hide_statusbar.invoke = proc(box: ^Checkbox) {
 			element_hide(statusbar.stat, box.state)
 		}
-		checkbox_hide_menubar = checkbox_init(panel, flags, "Hide Menubar", false)
-		checkbox_hide_menubar.invoke = proc(box: ^Checkbox) {
+		temp.checkbox_hide_menubar = checkbox_init(temp.panel, flags, "Hide Menubar", false)
+		temp.checkbox_hide_menubar.invoke = proc(box: ^Checkbox) {
 			element_hide(app.task_menu_bar, box.state)
 		}
-		checkbox_vim = checkbox_init(panel, flags, "Use VIM bindings", false)
-		checkbox_spell_checking = checkbox_init(panel, flags, "Use Spell-Checking", false)
+		temp.checkbox_vim = checkbox_init(temp.panel, flags, "Use VIM bindings", false)
+		temp.checkbox_spell_checking = checkbox_init(temp.panel, flags, "Use Spell-Checking", false)
 	
-		volume = drag_float_init(panel, flags, 1, 0, 1, "Volume: %.3f")
-		volume.hover_info = "Volume of all sound effects"
-		volume.on_changed = proc(drag: ^Drag_Float) {
+		temp.volume = drag_float_init(temp.panel, flags, 1, 0, 1, "Volume: %.3f")
+		temp.volume.hover_info = "Volume of all sound effects"
+		temp.volume.on_changed = proc(drag: ^Drag_Float) {
 			value := i32(drag.position * 128)
 			mix_volume_set(value)
 		}
 
-		opacity = drag_float_init(panel, flags, 1, 0.1, 1, "Opacity: %.3f")
-		opacity.hover_info = "Opacity of the main window"
-		opacity.on_changed = proc(drag: ^Drag_Float) {
+		temp.opacity = drag_float_init(temp.panel, flags, 1, 0.1, 1, "Opacity: %.3f")
+		temp.opacity.hover_info = "Opacity of the main window"
+		temp.opacity.on_changed = proc(drag: ^Drag_Float) {
 			window_opacity_set(app.window_main, drag.position)
 		}
 
-		spacer_init(panel, { .HF }, 0, spacer_scaled, .Empty)
-		label_visuals := label_init(panel, { .HF, .Label_Center }, "Visuals")
+		spacer_init(temp.panel, { .HF }, 0, spacer_scaled, .Empty)
+		label_visuals := label_init(temp.panel, { .HF, .Label_Center }, "Visuals")
 		label_visuals.font_options = &app.font_options_header
 
-		visuals.tab = drag_int_init(panel, flags, 20, 0, 200, "Tab: %dpx")
-		visuals.tab.hover_info = "Tab Indentation Width"
+		temp.visuals.tab = drag_int_init(temp.panel, flags, 20, 0, 200, "Tab: %dpx")
+		temp.visuals.tab.hover_info = "Tab Indentation Width"
 		
-		visuals.kanban_gap = drag_int_init(panel, flags, 10, 0, 100, "Kanban Gap: %dpx")
-		visuals.kanban_gap.hover_info = "Horizontal gap between kanbans"
+		temp.visuals.kanban_gap = drag_int_init(temp.panel, flags, 10, 0, 100, "Kanban Gap: %dpx")
+		temp.visuals.kanban_gap.hover_info = "Horizontal gap between kanbans"
 
-		visuals.kanban_width = drag_int_init(panel, flags, 300, 300, 1000, "Kanban Width: %dpx")
-		visuals.kanban_width.hover_info = "Minimum width of a Kanban"
+		temp.visuals.kanban_width = drag_int_init(temp.panel, flags, 300, 300, 1000, "Kanban Width: %dpx")
+		temp.visuals.kanban_width.hover_info = "Minimum width of a Kanban"
 
-		visuals.task_gap = drag_int_init(panel, flags, 1, 0, 20, "Task Gap: %dpx")
-		visuals.task_gap.hover_info = "Vertical gap between tasks"
+		temp.visuals.task_gap = drag_int_init(temp.panel, flags, 1, 0, 20, "Task Gap: %dpx")
+		temp.visuals.task_gap.hover_info = "Vertical gap between tasks"
 
-		visuals.task_margin = drag_int_init(panel, flags, 5, 0, 50, "Task Margin: %dpx")
-		visuals.task_margin.hover_info = "Margin around tasks"
+		temp.visuals.task_margin = drag_int_init(temp.panel, flags, 5, 0, 50, "Task Margin: %dpx")
+		temp.visuals.task_margin.hover_info = "Margin around tasks"
 
-		visuals.animation_speed = drag_int_init(panel, flags, 100, 10, 400, "Animation Speed: %d%%")
-		visuals.animation_speed.hover_info = "Animation speed multiplier of all linear animations"
+		temp.visuals.animation_speed = drag_int_init(temp.panel, flags, 100, 10, 400, "Animation Speed: %d%%")
+		temp.visuals.animation_speed.hover_info = "Animation speed multiplier of all linear animations"
 
-		visuals.fps = drag_int_init(panel, flags, 60, 10, 240, "Wanted FPS: %dfps")
-		visuals.fps.hover_info = "Set the minimum FPS, in case vsync isn't enabled, only used if vsync frequency is higher than FPS"
+		temp.visuals.fps = drag_int_init(temp.panel, flags, 60, 10, 240, "Wanted FPS: %dfps")
+		temp.visuals.fps.hover_info = "Set the minimum FPS, in case vsync isn't enabled, only used if vsync frequency is higher than FPS"
 
-		visuals.use_animations = checkbox_init(panel, flags, "Use Animations", true)
+		temp.visuals.use_animations = checkbox_init(temp.panel, flags, "Use Animations", true)
 	
 		// progressbar
 		{
-			spacer_init(panel, { .HF }, 0, spacer_scaled, .Empty)
-			header := label_init(panel, { .HF, .Label_Center }, "Progressbars")
+			spacer_init(temp.panel, { .HF }, 0, spacer_scaled, .Empty)
+			header := label_init(temp.panel, { .HF, .Label_Center }, "Progressbars")
 			header.font_options = &app.font_options_header
-			progressbar.show = checkbox_init(panel, flags, "Show", true)
-			progressbar.show.invoke = proc(box: ^Checkbox) {
+			sb.options.progressbar.show = checkbox_init(temp.panel, flags, "Show", true)
+			sb.options.progressbar.show.invoke = proc(box: ^Checkbox) {
 				app.progressbars_goal = box.state ? 1 : 0
 			}
-			progressbar.percentage = checkbox_init(panel, flags, "Use Percentage", false)
-			progressbar.hover_only = checkbox_init(panel, flags, "Hover Only", false)
+			sb.options.progressbar.percentage = checkbox_init(temp.panel, flags, "Use Percentage", false)
+			sb.options.progressbar.hover_only = checkbox_init(temp.panel, flags, "Hover Only", false)
 		}
 
 		// caret
 		{
 			temp2 := &sb.options.caret
-			using temp2
-			spacer_init(panel, { .HF }, 0, spacer_scaled, .Empty)
-			header := label_init(panel, { .HF, .Label_Center }, "Caret")
+			spacer_init(temp.panel, { .HF }, 0, spacer_scaled, .Empty)
+			header := label_init(temp.panel, { .HF, .Label_Center }, "Caret")
 			header.font_options = &app.font_options_header
 
-			animate = checkbox_init(panel, flags, "Use Animations", true)
-			animate.hover_info = "Toggle all caret animations"
-			motion = checkbox_init(panel, flags, "Animate Motion", true)
-			motion.hover_info = "Animate the movement motion of the caret"
-			alpha = checkbox_init(panel, flags, "Animate Alpha", true)
-			alpha.hover_info = "Animate the alpha fading of the caret - will redraw every frame"
+			temp2.animate = checkbox_init(temp.panel, flags, "Use Animations", true)
+			temp2.animate.hover_info = "Toggle all caret animations"
+			temp2.motion = checkbox_init(temp.panel, flags, "Animate Motion", true)
+			temp2.motion.hover_info = "Animate the movement motion of the caret"
+			temp2.alpha = checkbox_init(temp.panel, flags, "Animate Alpha", true)
+			temp2.alpha.hover_info = "Animate the alpha fading of the caret - will redraw every frame"
 		}
 
 		// line highlight
 		{
-			spacer_init(panel, { .HF }, 0, spacer_scaled, .Empty)
-			header := label_init(panel, { .HF, .Label_Center }, "Line Numbers")
+			spacer_init(temp.panel, { .HF }, 0, spacer_scaled, .Empty)
+			header := label_init(temp.panel, { .HF, .Label_Center }, "Line Numbers")
 			header.font_options = &app.font_options_header
 
-			line_highlight.use = checkbox_init(panel, flags, "Show", false)
-			line_highlight.alpha = drag_float_init(panel, flags, 0.5, 0, 1, "Alpha: %.3f")
-			line_highlight.alpha.hover_info = "Alpha for line numbers"
+			temp.line_highlight.use = checkbox_init(temp.panel, flags, "Show", false)
+			temp.line_highlight.alpha = drag_float_init(temp.panel, flags, 0.5, 0, 1, "Alpha: %.3f")
+			temp.line_highlight.alpha.hover_info = "Alpha for line numbers"
 		}
 
 		// power mode
 		{
 			temp2 := &sb.options.pm
-			using temp2
 
-			spacer_init(panel, { .HF }, 0, spacer_scaled, .Empty)
-			header := label_init(panel, { .HF, .Label_Center }, "Power Mode")
+			spacer_init(temp.panel, { .HF }, 0, spacer_scaled, .Empty)
+			header := label_init(temp.panel, { .HF, .Label_Center }, "Power Mode")
 			header.font_options = &app.font_options_header
 
-			ps_show = checkbox_init(panel, flags, "Show", false)
+			temp2.ps_show = checkbox_init(temp.panel, flags, "Show", false)
 
-			p_lifetime = drag_float_init(panel, flags, 0.5, 0.25, 2, "Particle Lifetime: %.3f")
-			p_lifetime.hover_info = "Particle Lifetime Scaling - the higher the longer one stays alive"
+			temp2.p_lifetime = drag_float_init(temp.panel, flags, 0.5, 0.25, 2, "Particle Lifetime: %.3f")
+			temp2.p_lifetime.hover_info = "Particle Lifetime Scaling - the higher the longer one stays alive"
 
-			p_alpha_scale = drag_float_init(panel, flags, 0.5, 0, 1, "Particle Alpha: %.3f")
-			p_alpha_scale.hover_info = "Particle Alpha Scale - the higher the more visible"
+			temp2.p_alpha_scale = drag_float_init(temp.panel, flags, 0.5, 0, 1, "Particle Alpha: %.3f")
+			temp2.p_alpha_scale.hover_info = "Particle Alpha Scale - the higher the more visible"
 
-			p_colored = checkbox_init(panel, flags, "Use Colors", true)
-			p_colored.hover_info = "Wether to use slowly shifting color hues"
+			temp2.p_colored = checkbox_init(temp.panel, flags, "Use Colors", true)
+			temp2.p_colored.hover_info = "Wether to use slowly shifting color hues"
 
 			// screenshake
-			s_use = checkbox_init(panel, flags, "Use Screenshake", true)
+			temp2.s_use = checkbox_init(temp.panel, flags, "Use Screenshake", true)
 
-			s_amount = drag_float_init(panel, flags, 3, 1, 20, "Screenshake Amount: %.0fpx")
-			s_amount.hover_info = "Screenshake Amount in px - the higher the more screenshake"
+			temp2.s_amount = drag_float_init(temp.panel, flags, 3, 1, 20, "Screenshake Amount: %.0fpx")
+			temp2.s_amount.hover_info = "Screenshake Amount in px - the higher the more screenshake"
 
-			s_lifetime = drag_float_init(panel, flags, 1, 0, 1, "Screenshake Multiplier: %.3f")
-			s_lifetime.hover_info = "Screenshake Multiplier - the lower the longer it screenshakes"
+			temp2.s_lifetime = drag_float_init(temp.panel, flags, 1, 0, 1, "Screenshake Multiplier: %.3f")
+			temp2.s_lifetime.hover_info = "Screenshake Multiplier - the lower the longer it screenshakes"
 		}
 	}
 
 	// tags
 	{
 		temp := &sb.tags
-		using temp
-		panel = shared_panel(enum_panel, "Tags")
+		temp.panel = shared_panel(enum_panel, "Tags")
 
 		shared_box :: proc(
 			panel: ^Panel, 
@@ -494,26 +490,26 @@ sidebar_enum_panel_init :: proc(parent: ^Element) {
 			sb.tags.temp_index += 1
 		}
 
-		label_init(panel, { .Label_Center }, "Tags 1-8")
-		shared_box(panel, "one")
-		shared_box(panel, "two")
-		shared_box(panel, "three")
-		shared_box(panel, "four")
-		shared_box(panel, "five")
-		shared_box(panel, "six")
-		shared_box(panel, "seven")
-		shared_box(panel, "eight")
+		label_init(temp.panel, { .Label_Center }, "Tags 1-8")
+		shared_box(temp.panel, "one")
+		shared_box(temp.panel, "two")
+		shared_box(temp.panel, "three")
+		shared_box(temp.panel, "four")
+		shared_box(temp.panel, "five")
+		shared_box(temp.panel, "six")
+		shared_box(temp.panel, "seven")
+		shared_box(temp.panel, "eight")
 
-		spacer_init(panel, { .HF }, 0, spacer_scaled, .Empty)
-		label_init(panel, { .HF, .Label_Center }, "Tag Showcase")
-		toggle_selector_tag = toggle_selector_init(
-			panel,
+		spacer_init(temp.panel, { .HF }, 0, spacer_scaled, .Empty)
+		label_init(temp.panel, { .HF, .Label_Center }, "Tag Showcase")
+		temp.toggle_selector_tag = toggle_selector_init(
+			temp.panel,
 			{ .HF },
 			sb.tags.tag_show_mode,
 			TAG_SHOW_COUNT,
 			tag_show_text[:],
 		)
-		toggle_selector_tag.changed = proc(toggle: ^Toggle_Selector) {
+		temp.toggle_selector_tag.changed = proc(toggle: ^Toggle_Selector) {
 			sb.tags.tag_show_mode = toggle.value
 		}
 	}
@@ -521,10 +517,9 @@ sidebar_enum_panel_init :: proc(parent: ^Element) {
 	// archive
 	{
 		temp := &sb.archive
-		using temp
-		panel = shared_panel(enum_panel, "Archive", false)
+		temp.panel = shared_panel(enum_panel, "Archive", false)
 
-		top := panel_init(panel, { .HF, .Panel_Horizontal, .Panel_Default_Background })
+		top := panel_init(temp.panel, { .HF, .Panel_Horizontal, .Panel_Default_Background })
 		top.rounded = true
 		top.background_index = 2
 
@@ -554,38 +549,37 @@ sidebar_enum_panel_init :: proc(parent: ^Element) {
 		}
 
 		{
-			buttons = panel_init(panel, { .HF, .VF, .Panel_Default_Background, .Panel_Scroll_Vertical }, 5, 1)
-			buttons.background_index = 2
-			buttons.layout_elements_in_reverse = true
+			temp.buttons = panel_init(temp.panel, { .HF, .VF, .Panel_Default_Background, .Panel_Scroll_Vertical }, 5, 1)
+			temp.buttons.background_index = 2
+			temp.buttons.layout_elements_in_reverse = true
 		}
 	}
 
 	// statistics
 	{
 		temp := &sb.stats
-		using temp
 		flags := Element_Flags { .HF }
-		panel = shared_panel(enum_panel, "Pomodoro")
+		temp.panel = shared_panel(enum_panel, "Pomodoro")
 
 		// pomodoro		
-		work = drag_int_init(panel, flags, 50, 0, 60, "Work: %dmin")
-		short_break = drag_int_init(panel, flags, 10, 0, 60, "Short Break: %dmin")
-		long_break = drag_int_init(panel, flags, 30, 0, 60, "Long Break: %dmin")
+		sb.stats.work = drag_int_init(temp.panel, flags, 50, 0, 60, "Work: %dmin")
+		sb.stats.short_break = drag_int_init(temp.panel, flags, 10, 0, 60, "Short Break: %dmin")
+		sb.stats.long_break = drag_int_init(temp.panel, flags, 30, 0, 60, "Long Break: %dmin")
 
 		// statistics
-		spacer_init(panel, flags, 0, spacer_scaled, .Empty)
-		l2 := label_init(panel, { .HF, .Label_Center }, "Statistics")
+		spacer_init(temp.panel, flags, 0, spacer_scaled, .Empty)
+		l2 := label_init(temp.panel, { .HF, .Label_Center }, "Statistics")
 		l2.font_options = &app.font_options_header
 
-		label_time_accumulated = label_init(panel, { .HF, .Label_Center })
-		b1 := button_init(panel, flags, "Reset acummulated")
+		sb.stats.label_time_accumulated = label_init(temp.panel, { .HF, .Label_Center })
+		b1 := button_init(temp.panel, flags, "Reset acummulated")
 		b1.invoke = proc(button: ^Button, data: rawptr) {
 			pomodoro.accumulated = {}
 			pomodoro.celebration_goal_reached = false
 		}
 
 		{
-			sub := panel_init(panel, { .HF, .Panel_Horizontal, .Panel_Default_Background }, 0, 2)
+			sub := panel_init(temp.panel, { .HF, .Panel_Horizontal, .Panel_Default_Background }, 0, 2)
 			sub.rounded = true
 			sub.background_index = 2
 			drag := drag_int_init(sub, flags, 30.0, 0, 60, "Cheat: %dmin")
@@ -599,10 +593,10 @@ sidebar_enum_panel_init :: proc(parent: ^Element) {
 			}
 		}
 
-		work_today = drag_int_init(panel, flags, 8, 0, 24, "Goal Today: %dh")
+		sb.stats.work_today = drag_int_init(temp.panel, flags, 8, 0, 24, "Goal Today: %dh")
 
-		gauge_work_today = linear_gauge_init(panel, flags, 0.5, "Done Today", "Working Overtime")
-		gauge_work_today.message_user = proc(element: ^Element, msg: Message, di: int, dp: rawptr) -> int {
+		sb.stats.gauge_work_today = linear_gauge_init(temp.panel, flags, 0.5, "Done Today", "Working Overtime")
+		sb.stats.gauge_work_today.message_user = proc(element: ^Element, msg: Message, di: int, dp: rawptr) -> int {
 			if msg == .Paint_Recursive {
 				if pomodoro.celebrating {
 					target := element.window.target

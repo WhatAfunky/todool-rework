@@ -496,7 +496,11 @@ theme_editor_spawn :: proc(du: u32 = COMBO_EMPTY) {
 					}
 
 					case "1"..<"6": {
-						num := strconv.atoi(combo)
+						num, ok := strconv.parse_int(combo)
+            if !ok {
+              num = 1
+            }
+
 						a, b := theme_editor.skips[num - 1], theme_editor.skips[num]
 
 						state_goal := !theme_editor.number_states[num - 1]

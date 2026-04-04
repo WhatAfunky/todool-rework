@@ -395,10 +395,10 @@ window_main_message :: proc(element: ^Element, msg: Message, di: int, dp: rawptr
 							window_drop_init(app.window_main)
 							for file_path in window_drop_iter(app.window_main) {
 								// import from code
-								content, ok := os.read_entire_file(file_path)
+								content, err := os.read_entire_file(file_path, context.allocator)
 								defer delete(content)
 
-								if ok {
+								if err != nil {
 									had_imports |= pattern_load_content_simple(manager, string(content), result, task_indentation, &task_insert_offset)
 								}
 							}

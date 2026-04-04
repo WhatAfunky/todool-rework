@@ -516,7 +516,10 @@ button_day_message :: proc(element: ^Element, msg: Message, di: int, dp: rawptr)
 		case .Clicked: {
 			if button.alpha == 255 {
 				text := string(button.bytes[:button.byte_length])
-				value := strconv.atoi(text)
+				value, ok := strconv.parse_int(text)
+        if !ok {
+          value = 0
+        }
 				menu_date_day_set(value)
 			}
 		}

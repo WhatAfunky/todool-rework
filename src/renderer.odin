@@ -153,47 +153,46 @@ Render_Vertex :: struct #packed {
 
 render_target_init :: proc(window: ^sdl.Window) -> (res: ^Render_Target) {
 	res = new(Render_Target)
-	using res
 
 	sdl.GL_SetAttribute(.CONTEXT_MAJOR_VERSION, 3)
 	sdl.GL_SetAttribute(.CONTEXT_MINOR_VERSION, 3)
 	sdl.GL_SetAttribute(.CONTEXT_PROFILE_MASK, i32(sdl.GLprofile.CORE))
 	sdl.GL_SetAttribute(.CONTEXT_FLAGS, i32(sdl.GLcontextFlag.DEBUG_FLAG))
-	opengl_context = sdl.GL_CreateContext(window)
+	res.opengl_context = sdl.GL_CreateContext(window)
 	gl.load_up_to(3, 3, sdl.gl_set_proc_address)
 
 	// shader loading
 	shader_ok: bool
-	shader_program, shader_ok = gl.load_shaders_source(string(shader_vert), string(shader_frag), false)
+	res.shader_program, shader_ok = gl.load_shaders_source(string(shader_vert), string(shader_frag), false)
 	if !shader_ok {
 		log.panic("RENDERER: Failed to load shader")
 	}
-	gl.UseProgram(shader_program)
+	gl.UseProgram(res.shader_program)
 
 	// uniforms
-	uniform_projection = gl.GetUniformLocation(shader_program, "u_projection")
-	uniform_shadow_color = gl.GetUniformLocation(shader_program, "u_shadow_color")
+	res.uniform_projection = gl.GetUniformLocation(res.shader_program, "u_projection")
+	res.uniform_shadow_color = gl.GetUniformLocation(res.shader_program, "u_shadow_color")
 	
 	// attributes
-	attribute_position = u32(gl.GetAttribLocation(shader_program, "i_pos"))
-	attribute_uv = u32(gl.GetAttribLocation(shader_program, "i_uv"))
-	attribute_color = u32(gl.GetAttribLocation(shader_program, "i_color"))
-	attribute_add = u32(gl.GetAttribLocation(shader_program, "i_add"))
-	attribute_roundness_and_thickness = u32(gl.GetAttribLocation(shader_program, "i_roundness_and_thickness"))
-	attribute_kind = u32(gl.GetAttribLocation(shader_program, "i_kind"))
+	res.attribute_position = u32(gl.GetAttribLocation(res.shader_program, "i_pos"))
+	res.attribute_uv = u32(gl.GetAttribLocation(res.shader_program, "i_uv"))
+	res.attribute_color = u32(gl.GetAttribLocation(res.shader_program, "i_color"))
+	res.attribute_add = u32(gl.GetAttribLocation(res.shader_program, "i_add"))
+	res.attribute_roundness_and_thickness = u32(gl.GetAttribLocation(res.shader_program, "i_roundness_and_thickness"))
+	res.attribute_kind = u32(gl.GetAttribLocation(res.shader_program, "i_kind"))
 
-	gl.GenVertexArrays(1, &vao)
-	gl.BindVertexArray(vao)
+	gl.GenVertexArrays(1, &res.vao)
+	gl.BindVertexArray(res.vao)
 
-	gl.GenBuffers(1, &attribute_buffer)
-	gl.BindBuffer(gl.ARRAY_BUFFER, attribute_buffer)
+	gl.GenBuffers(1, &res.attribute_buffer)
+	gl.BindBuffer(gl.ARRAY_BUFFER, res.attribute_buffer)
 
 	// render data
-	groups = make([dynamic]Render_Group, 0, 32)
-	vertices = make([]Render_Vertex, 1000 * 64)
+	res.groups = make([dynamic]Render_Group, 0, 32)
+	res.vertices = make([]Render_Vertex, 1000 * 64)
 
 	render_target_fontstash_generate(res, gs.fc.width, gs.fc.height)
-	textures[.Fonts].uniform_sampler = gl.GetUniformLocation(shader_program, "u_sampler_font")
+	res.textures[.Fonts].uniform_sampler = gl.GetUniformLocation(res.shader_program, "u_sampler_font")
 
 	// TODO only generate this for main window?
 	texture_generate_from_png(res, .SV, png_sv, "_sv")
@@ -202,15 +201,15 @@ render_target_init :: proc(window: ^sdl.Window) -> (res: ^Render_Target) {
 	texture_generate_from_png(res, .List, png_mode_icon_list, "_list")
 	texture_generate_from_png(res, .Drag, png_mode_icon_drag, "_drag", gl.CLAMP_TO_EDGE, gl.LINEAR)
 
-	res.shallow_uniform_sampler = gl.GetUniformLocation(shader_program, "u_sampler_custom")
+	res.shallow_uniform_sampler = gl.GetUniformLocation(res.shader_program, "u_sampler_custom")
 	// log.info("bind slots", gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS)
 
 	return
 }
 
 // generate the fontstash atlas texture with the wanted width and height
-render_target_fontstash_generate :: proc(using target: ^Render_Target, width, height: int) {
-	textures[.Fonts] = Render_Texture {
+render_target_fontstash_generate :: proc(target: ^Render_Target, width, height: int) {
+	target.textures[.Fonts] = Render_Texture {
 		data = raw_data(gs.fc.textureData),
 		width = i32(width),
 		height = i32(height),
@@ -221,26 +220,26 @@ render_target_fontstash_generate :: proc(using target: ^Render_Target, width, he
 	texture_generate(target, .Fonts)
 }
 
-render_target_destroy :: proc(using target: ^Render_Target) {
-	sdl.GL_DeleteContext(opengl_context)
-	delete(vertices)
-	delete(groups)
+render_target_destroy :: proc(target: ^Render_Target) {
+	sdl.GL_DeleteContext(target.opengl_context)
+	delete(target.vertices)
+	delete(target.groups)
 	
-	for &texture in &textures {
+	for &texture in &target.textures {
 		texture_destroy(&texture)
 	}
 
 	free(target)
 }
 
-render_target_begin :: proc(using target: ^Render_Target, shadow: Color) {
-	shadow_color = shadow
+render_target_begin :: proc(target: ^Render_Target, shadow: Color) {
+	target.shadow_color = shadow
 
 	// clear group
 	clear(&target.groups)
 	
 	// clear vertex info
-	vertex_index = 0
+	target.vertex_index = 0
 }
 
 rect_scissor :: proc(target_height: i32, r: RectI) {
@@ -249,7 +248,7 @@ rect_scissor :: proc(target_height: i32, r: RectI) {
 }
 
 render_target_end :: proc(
-	using target: ^Render_Target, 
+	target: ^Render_Target, 
 	window: ^sdl.Window, 
 	width, height: int,
 ) {
@@ -281,19 +280,21 @@ render_target_end :: proc(
 	gl.Clear(gl.COLOR_BUFFER_BIT)
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 
-	gl.EnableVertexAttribArray(attribute_position)
-	gl.EnableVertexAttribArray(attribute_uv)
-	gl.EnableVertexAttribArray(attribute_color)
-	gl.EnableVertexAttribArray(attribute_add)
-	gl.EnableVertexAttribArray(attribute_roundness_and_thickness)
-	gl.EnableVertexAttribArray(attribute_kind)
+	gl.EnableVertexAttribArray(target.attribute_position)
+	gl.EnableVertexAttribArray(target.attribute_uv)
+	gl.EnableVertexAttribArray(target.attribute_color)
+	gl.EnableVertexAttribArray(target.attribute_add)
+	gl.EnableVertexAttribArray(target.attribute_roundness_and_thickness)
+	gl.EnableVertexAttribArray(target.attribute_kind)
+
 	size := i32(size_of(Render_Vertex))
-	gl.VertexAttribPointer(attribute_position, 2, gl.FLOAT, true, size, 0)
-	gl.VertexAttribPointer(attribute_uv, 2, gl.FLOAT, true, size, offset_of(Render_Vertex, uv_xy))
-	gl.VertexAttribIPointer(attribute_color, 1, gl.UNSIGNED_INT, size, offset_of(Render_Vertex, color))
-	gl.VertexAttribPointer(attribute_add, 4, gl.FLOAT, true, size, offset_of(Render_Vertex, add))
-	gl.VertexAttribIPointer(attribute_roundness_and_thickness, 1, gl.UNSIGNED_INT, size, offset_of(Render_Vertex, roundness))
-	gl.VertexAttribIPointer(attribute_kind, 1, gl.UNSIGNED_INT, size, offset_of(Render_Vertex, kind))
+
+	gl.VertexAttribPointer(target.attribute_position, 2, gl.FLOAT, true, size, 0)
+	gl.VertexAttribPointer(target.attribute_uv, 2, gl.FLOAT, true, size, offset_of(Render_Vertex, uv_xy))
+	gl.VertexAttribIPointer(target.attribute_color, 1, gl.UNSIGNED_INT, size, offset_of(Render_Vertex, color))
+	gl.VertexAttribPointer(target.attribute_add, 4, gl.FLOAT, true, size, offset_of(Render_Vertex, add))
+	gl.VertexAttribIPointer(target.attribute_roundness_and_thickness, 1, gl.UNSIGNED_INT, size, offset_of(Render_Vertex, roundness))
+	gl.VertexAttribIPointer(target.attribute_kind, 1, gl.UNSIGNED_INT, size, offset_of(Render_Vertex, kind))
 
 	for kind in Texture_Kind {
 		texture_bind(target, kind)
@@ -305,7 +306,7 @@ render_target_end :: proc(
 
 	// fmt.eprintln("render")
 
-	for group, group_index in &groups {
+	for group, group_index in &target.groups {
 		rect_scissor(i32(height), group.clip)
 		vertice_count := group.vertex_end - group.vertex_start
 
@@ -341,24 +342,24 @@ render_target_end :: proc(
 
 			// update uniforms
 			projection := glm.mat4Ortho3d(0, f32(width), f32(height), 0, -1, 1)
-			gl.UniformMatrix4fv(uniform_projection, 1, false, &projection[0][0])
+			gl.UniformMatrix4fv(target.uniform_projection, 1, false, &projection[0][0])
 			gl.Uniform4f(
-				uniform_shadow_color, 
-				f32(shadow_color.r) / 255,
-				f32(shadow_color.g) / 255,
-				f32(shadow_color.b) / 255,
-				f32(shadow_color.a) / 255,
+				target.uniform_shadow_color, 
+				f32(target.shadow_color.r) / 255,
+				f32(target.shadow_color.g) / 255,
+				f32(target.shadow_color.b) / 255,
+				f32(target.shadow_color.a) / 255,
 			)
 
 			gl.DrawArrays(gl.TRIANGLES, 0, i32(vertice_count))
 		}
 	}
 
-	gl.DisableVertexAttribArray(attribute_position)
-	gl.DisableVertexAttribArray(attribute_uv)
-	gl.DisableVertexAttribArray(attribute_color)
-	gl.DisableVertexAttribArray(attribute_roundness_and_thickness)
-	gl.DisableVertexAttribArray(attribute_kind)
+	gl.DisableVertexAttribArray(target.attribute_position)
+	gl.DisableVertexAttribArray(target.attribute_uv)
+	gl.DisableVertexAttribArray(target.attribute_color)
+	gl.DisableVertexAttribArray(target.attribute_roundness_and_thickness)
+	gl.DisableVertexAttribArray(target.attribute_kind)
 	gl.Flush()
 	sdl.GL_SwapWindow(window)
 }
@@ -380,11 +381,11 @@ render_target_push_vertices :: proc(
 }
 
 // push a clip group
-render_push_clip :: proc(using target: ^Render_Target, clip_goal: RectI) {
-	append(&groups, Render_Group {
+render_push_clip :: proc(target: ^Render_Target, clip_goal: RectI) {
+	append(&target.groups, Render_Group {
 		clip = clip_goal,
-		vertex_start = vertex_index,	
-		vertex_end = vertex_index,
+		vertex_start = target.vertex_index,	
+		vertex_end = target.vertex_index,
 		bind_slot = -1,
 		blend_sfactor = gl.SRC_ALPHA,
 		blend_dfactor = gl.ONE_MINUS_SRC_ALPHA,
@@ -630,28 +631,27 @@ texture_generate :: proc(
 	param := i32(gl.NEAREST),
 ) {
 	texture := &target.textures[kind]
-	using texture 
 
 	// when called multiple times
-	if handle != 0 {
-		gl.DeleteTextures(1, &handle)
-		handle = 0
+	if texture.handle != 0 {
+		gl.DeleteTextures(1, &texture.handle)
+		texture.handle = 0
 	}
 
-	gl.GenTextures(1, &handle)
-	gl.BindTexture(gl.TEXTURE_2D, handle)
+	gl.GenTextures(1, &texture.handle)
+	gl.BindTexture(gl.TEXTURE_2D, texture.handle)
 
 	// gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1) 
 	gl.TexImage2D(
 		gl.TEXTURE_2D, 
 		0,
-		format_a,
-		width, 
-		height, 
+		texture.format_a,
+		texture.width, 
+		texture.height, 
 		0, 
-		format_b, 
+		texture.format_b, 
 		gl.UNSIGNED_BYTE, 
-		data,
+		texture.data,
 	)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, mode)
 	gl.TexParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, mode)
@@ -663,18 +663,18 @@ texture_generate :: proc(
 }
 
 // update the full texture 
-texture_update :: proc(using texture: ^Render_Texture) {
-	gl.BindTexture(gl.TEXTURE_2D, handle)
+texture_update :: proc(texture: ^Render_Texture) {
+	gl.BindTexture(gl.TEXTURE_2D, texture.handle)
 	gl.TexImage2D(
 		gl.TEXTURE_2D, 
 		0, 
-		format_a, 
-		width, 
-		height, 
+		texture.format_a, 
+		texture.width, 
+		texture.height, 
 		0, 
-		format_b, 
+		texture.format_b, 
 		gl.UNSIGNED_BYTE, 
-		data,
+		texture.data,
 	)
 	gl.BindTexture(gl.TEXTURE_2D, 0)
 }
@@ -736,11 +736,10 @@ texture_update_subimage :: proc(
 
 texture_bind :: proc(target: ^Render_Target, kind: Texture_Kind) {
 	texture := &target.textures[kind]
-	using texture
 
-	gl.Uniform1i(uniform_sampler, i32(kind))
+	gl.Uniform1i(target.textures[kind].uniform_sampler, i32(kind))
 	gl.ActiveTexture(gl.TEXTURE0 + u32(kind))
-	gl.BindTexture(gl.TEXTURE_2D, handle)
+	gl.BindTexture(gl.TEXTURE_2D, target.textures[kind].handle)
 }
 
 texture_image :: proc(target: ^Render_Target, kind: Texture_Kind) -> ^image.Image #no_bounds_check {
@@ -748,9 +747,9 @@ texture_image :: proc(target: ^Render_Target, kind: Texture_Kind) -> ^image.Imag
 	return target.textures[kind].image
 }
 
-texture_destroy :: proc(using texture: ^Render_Texture) {
-	if image != nil {
-		png.destroy(image)
+texture_destroy :: proc(texture: ^Render_Texture) {
+	if texture.image != nil {
+		png.destroy(texture.image)
 	}
 }
 

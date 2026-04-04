@@ -1427,10 +1427,10 @@ todool_load :: proc(du: u32) {
 		proc() {
 			last_save_set(app.save_string)
 			file_path := strings.to_string(app.last_save_location)
-			file_data, ok := os.read_entire_file(file_path)
+			file_data, ok := os.read_entire_file(file_path, context.allocator)
 			defer delete(file_data)
 
-			if !ok {
+			if ok != nil {
 				log.infof("LOAD: File not found %s\n", file_path)
 				return
 			}
