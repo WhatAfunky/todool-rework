@@ -12,3 +12,7 @@ run:
 
 check:
 	@odin check src -thread-count:12
+
+# macOS only: optimized build packaged as target/Todool.app
+app: release
+	@python3 scripts/bundle_mac.py target/todool
