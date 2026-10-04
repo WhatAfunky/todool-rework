@@ -5,8 +5,11 @@ import "core:c"
 when ODIN_OS == .Windows { 
 	foreign import lib { "main.lib", "system:user32.lib", "system:ole32.lib", "system:Comdlg32.lib", "system:shell32.lib" }
 }
-when ODIN_OS == .Linux || ODIN_OS == .Darwin { 
+when ODIN_OS == .Linux { 
 	foreign import lib { "main.a" }
+}
+when ODIN_OS == .Darwin { 
+	foreign import lib { "main-darwin.a" }
 }
 
 @(default_calling_convention="c", link_prefix="tinyfd_")
