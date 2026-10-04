@@ -1467,7 +1467,7 @@ gs_init :: proc() {
 		// all rights on linux
 		log_file_handle, errno := os.open(gs.log_path, os.O_WRONLY | os.O_CREATE | os.O_APPEND)
 	} else {
-		log_file_handle, errno := os.open(log_path, os.O_WRONLY | os.O_CREATE | os.O_APPEND)
+		log_file_handle, errno := os.open(gs.log_path, os.O_WRONLY | os.O_CREATE | os.O_APPEND)
 	}
 
 	gs.logger = log.create_file_logger(log_file_handle)
