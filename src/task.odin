@@ -3485,16 +3485,45 @@ app_focus_alpha_update :: proc() {
 	}
 }
 
+// focus root index in the filter, checked against the filter since
+// filter_index goes stale when tasks get removed (undo) until the next update
+app_focus_root_index :: proc() -> (index: int, ok: bool) {
+	root := app.focus.root
+	if root == nil {
+		return
+	}
+
+	if root.filter_index >= 0 && root.filter_index < len(app.pool.filter) && app.pool.filter[root.filter_index] == root.list_index {
+		return root.filter_index, true
+	}
+
+	for list_index, i in app.pool.filter {
+		if list_index == root.list_index {
+			return i, true
+		}
+	}
+
+	// the root is not part of the list anymore
+	app.focus.root = nil
+	return
+}
+
+// start/end of the focus range in the filter, always within bounds
+app_focus_range :: proc() -> (start, end: int, ok: bool) {
+	start = app_focus_root_index() or_return
+	end = start + 1
+
+	if !app.focus.root.filter_folded {
+		end += len(app.focus.root.filter_children)
+	}
+
+	end = min(end, len(app.pool.filter))
+	return start, end, true
+}
+
 // get focus slice or 
 app_focus_list :: proc() -> (res: []int) {
-	if app.focus.root != nil {
-		start := app.focus.root.filter_index
-		end := app.focus.root.filter_index + 1
-
-		if !app.focus.root.filter_folded {
-			end += len(app.focus.root.filter_children)
-		}
-
+	if start, end, ok := app_focus_range(); ok {
 		res = app.pool.filter[start:end]
 	} else {
 		res = app.pool.filter[:]
@@ -3505,20 +3534,20 @@ app_focus_list :: proc() -> (res: []int) {
 
 // get start/end of the focus range
 app_focus_bounds :: proc(){
-	if app.focus.root != nil {
-		app.focus.start = app.focus.root.filter_index
-		app.focus.end = app.focus.root.filter_index + 1
-
-		if !app.focus.root.filter_folded {
-			app.focus.end += len(app.focus.root.filter_children)
-		}
+	if start, end, ok := app_focus_range(); ok {
+		app.focus.start = start
+		app.focus.end = end
 	}
 }
 
 tasks_render_with_focus_animation :: proc(target: ^Render_Target) {
 	alpha_animate := app_focus_alpha_animate()
 	if alpha_animate != 0 {
-		start := app.pool.filter[:app.focus.start]
+		// the bounds are from the last time a focus was set and the list might have shrunk since
+		focus_start := clamp(app.focus.start, 0, len(app.pool.filter))
+		focus_end := clamp(app.focus.end, focus_start, len(app.pool.filter))
+
+		start := app.pool.filter[:focus_start]
 		shadow_color := color_alpha(theme.background[0], clamp(app.focus.alpha, 0, 1))
 
 		// inside focus
@@ -3531,7 +3560,7 @@ tasks_render_with_focus_animation :: proc(target: ^Render_Target) {
 		}
 
 		// NOTE! hard set
-		list := app.pool.filter[app.focus.start:app.focus.end]
+		list := app.pool.filter[focus_start:focus_end]
 
 		// inside focus
 		for list_index in list {
@@ -3539,7 +3568,7 @@ tasks_render_with_focus_animation :: proc(target: ^Render_Target) {
 			render_element_clipped(target, &task.element)
 		}
 
-		end := app.pool.filter[app.focus.end:]
+		end := app.pool.filter[focus_end:]
 
 		// inside focus
 		for list_index in end {

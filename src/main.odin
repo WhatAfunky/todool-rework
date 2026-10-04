@@ -249,7 +249,8 @@ main_update :: proc(window: ^Window) {
 	if app_filter_not_empty() && app.focus.root != nil {
 		app_focus_bounds()
 
-		if !(app.focus.start <= app.task_head && app.task_head < app.focus.end) || !task_has_children(app.focus.root) {
+		// bounds can drop the root when it is not in the list anymore
+		if app.focus.root != nil && (!(app.focus.start <= app.task_head && app.task_head < app.focus.end) || !task_has_children(app.focus.root)) {
 			app.focus.root = nil
 		}
 	}
