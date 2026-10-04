@@ -3460,10 +3460,11 @@ render_caret_and_outlines :: proc(target: ^Render_Target, clip: RectI) {
 
 // wether or not to update the focus alpha
 app_focus_alpha_animate :: proc() -> int {
+	// stop once the goal is reached, otherwise this animates (and repaints) forever
 	if app.focus.root != nil {
-		return app.focus.alpha <= 1 ? 1 : 0
+		return app.focus.alpha < 1 ? 1 : 0
 	} else {
-		return app.focus.alpha >= 0 ? -1 : 0
+		return app.focus.alpha > 0 ? -1 : 0
 	}
 }
 
